@@ -1,0 +1,14 @@
+[project]
+name = "personal-finance-tracker"
+version = "0.1.0"
+description = "Desktop app to track personal income and expenses (Python + PostgreSQL)."
+requires-python = ">=3.12"
+dependecies = [
+  "sqlalchemy>=2.0.0",
+  "psycopg[binary]>=3.2.0",
+  "python-dotenv>=1.0.1"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
