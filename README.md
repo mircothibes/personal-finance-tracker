@@ -64,3 +64,52 @@ docker compose ps
 ```
 
 ---
+
+## 💡 Development Highlights
+
+- Built and tested entirely inside Linux (Ubuntu)
+- Managed with Neovim, tmux, and Docker CLI
+- Fully reproducible through versioned migrations (alembic/versions)
+- Consistent environment setup for local or cloud deployment
+
+---
+
+## 🧑‍💻 Author
+
+Marcos Vinicius Thibes Keme
+
+---
+
+## 📜 License
+
+This project is released under the MIT License.
+Feel free to use, modify, and learn from it.
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
