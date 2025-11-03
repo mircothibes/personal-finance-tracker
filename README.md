@@ -65,6 +65,24 @@ docker compose ps
 
 ---
 
+## 🧱 Database Migrations with Alembic
+Create a new migration
+```bash
+alembic revision -m "add new table or column"
+```
+
+Apply migrations
+```bash
+alembic upgrade head
+```
+
+Check migration history
+```bash
+alembic history --verbose
+```
+
+---
+
 ## 💡 Development Highlights
 
 - Built and tested entirely inside Linux (Ubuntu)
