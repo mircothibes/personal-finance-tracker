@@ -51,4 +51,16 @@ finance-tracker/
 
 ---
 
+## 🐳 Docker Setup
 
+### 1️⃣ Build and start the services
+```bash
+docker compose up --build -d
+```
+
+### 2️⃣ Verify that both containers are running
+```bash
+docker compose ps
+```
+
+---
