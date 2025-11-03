@@ -76,14 +76,14 @@ docker compose ps
 
 ## 🧑‍💻 Author
 
-Marcos Vinicius Thibes Keme
+Marcos Vinicius Thibes Kemer
 
 ---
 
 ## 📜 License
 
-This project is released under the MIT License.
-Feel free to use, modify, and learn from it.
+* This project is released under the MIT License.
+* Feel free to use, modify, and learn from it.
 
 ---
 
