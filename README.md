@@ -32,3 +32,23 @@ It includes full database migration management and version control using **Alemb
 - 🧠 **Linux + Neovim Development Setup**
 
 ---
+
+## 🧭 Project Structure
+```bash
+finance-tracker/
+├── alembic/
+│ ├── versions/
+│ ├── env.py
+│ ├── script.py.mako
+│ └── README
+├── scripts/
+│ └── seed_categories.py
+├── .env
+├── Dockerfile
+├── docker-compose.yml
+└── README.md
+```
+
+---
+
+
