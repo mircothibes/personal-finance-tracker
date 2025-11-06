@@ -1,6 +1,7 @@
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
+
 from app.db import SessionLocal, get_transactions, delete_transaction
 
 def main():
