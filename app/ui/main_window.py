@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from sqlalchemy import text, select
 from sqlalchemy.orm import Session
 
-from app.db import engine, SessionLocal
+from app.db import engine, SessionLocal, get_transactions, delete_transaction
 from app.models import Category, Account, Transaction
 
 load_dotenv()
@@ -157,8 +157,8 @@ class AddTransactionDialog(tk.Toplevel):
 def run():
     root = tk.Tk()
     root.title("Finance Tracker")
-    root.geometry("560x260")
-    root.resizable(False, False)
+    root.geometry("900x600")
+    root.resizable(True, True)
 
     container = ttk.Frame(root, padding=16)
     container.pack(fill="both", expand=True)
@@ -176,13 +176,119 @@ def run():
     ttk.Button(row, text="Add Transaction…", command=lambda: AddTransactionDialog(root)).pack(side="left", padx=8)
     ttk.Button(row, text="Exit", command=root.destroy).pack(side="right")
 
-    status = ttk.Label(container, text=f"Connected URL: {os.getenv('DATABASE_URL','(not set)')}", anchor="w", relief="groove")
-    status.pack(fill="x", pady=(16, 0))
+    # --- Filters + Table Section ---
+    filters = ttk.Frame(container)
+    filters.pack(fill="x", pady=(16, 4))
 
+    ttk.Label(filters, text="Type").pack(side="left", padx=(0, 4))
+    cb_type = ttk.Combobox(filters, values=["", "expense", "income"], width=10, state="readonly")
+    cb_type.pack(side="left", padx=(0, 12))
+
+    ttk.Label(filters, text="Category").pack(side="left")
+    cb_category = ttk.Combobox(filters, width=18, state="readonly")
+    cb_category.pack(side="left", padx=(4, 12))
+
+    ttk.Label(filters, text="Account").pack(side="left")
+    cb_account = ttk.Combobox(filters, width=18, state="readonly")
+    cb_account.pack(side="left", padx=(4, 12))
+
+    ttk.Button(filters, text="Apply").pack(side="left", padx=(4, 4))
+    ttk.Button(filters, text="Clear").pack(side="left")
+
+    # --- Transactions Table ---
+    table_frame = ttk.Frame(container)
+    table_frame.pack(fill="both", expand=True, pady=(4, 8))
+
+    columns = ("id", "date", "type", "amount", "account_id", "category_id", "notes")
+    tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=14)
+    for col in columns:
+        tree.heading(col, text=col.title())
+        tree.column(col, anchor="center", width=100)
+    tree.column("notes", width=240, anchor="w")
+    tree.pack(side="left", fill="both", expand=True)
+
+    scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+    scrollbar.pack(side="right", fill="y")
+    tree.configure(yscroll=scrollbar.set)
+
+    # --- Delete Button ---
+    ttk.Button(container, text="Delete Selected", command=lambda: delete_selected(tree)).pack(pady=(0, 10))
+
+    # --- Status Bar ---
+    status = ttk.Label(container, text=f"Connected URL: {os.getenv('DATABASE_URL','(not set)')}",
+                       anchor="w", relief="groove")
+    status.pack(fill="x", pady=(8, 0))
+
+    # Load initial data
+    refresh_table(tree)
+
+    # 🔹 MAIN LOOP
     root.mainloop()
+
+
+def refresh_table(tree):
+    """Load transactions into the Treeview."""
+    for item in tree.get_children():
+        tree.delete(item)
+
+    with SessionLocal() as s:
+        rows = get_transactions(s)
+
+    for r in rows:
+        tree.insert(
+            "",
+            "end",
+            values=(
+                r.id,
+                r.date.isoformat(),
+                r.type,
+                f"{r.amount:.2f}",
+                r.account_id,
+                r.category_id,
+                (r.notes or "")[:80],
+            ),
+        )
+
+
+def delete_selected(tree):
+    """Delete selected transaction."""
+    sel = tree.selection()
+    if not sel:
+        messagebox.showinfo("Delete", "No transaction selected.")
+        return
+
+    tx_id = int(tree.item(sel[0], "values")[0])
+    if not messagebox.askyesno("Confirm", f"Delete transaction ID {tx_id}?"):
+        return
+
+    with SessionLocal() as s:
+        ok = delete_transaction(s, tx_id)
+
+    if ok:
+        messagebox.showinfo("Delete", f"✅ Transaction {tx_id} deleted.")
+        refresh_table(tree)
+    else:
+        messagebox.showerror("Delete", f"❌ Could not delete ID {tx_id}.")
+    
+
 
 
 if __name__ == "__main__":
     run()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
