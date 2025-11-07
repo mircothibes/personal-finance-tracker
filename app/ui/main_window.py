@@ -153,6 +153,32 @@ class AddTransactionDialog(tk.Toplevel):
         except Exception as e:
             messagebox.showerror("DB Error", f"Could not save transaction:\n{e}")
 
+def _load_filter_options(cb_category: ttk.Combobox, cb_account: ttk.Combobox):
+    """Carrega nomes de Category e Account nos comboboxes (com opção vazia)."""
+    with SessionLocal() as s:
+        cats = [r[0] for r in s.execute(select(Category.name).order_by(Category.name)).all()]
+        accs = [r[0] for r in s.execute(select(Account.name).order_by(Account.name)).all()]
+    cb_category["values"] = [""] + cats
+    cb_account["values"] = [""] + accs
+    cb_category.set("")
+    cb_account.set("")
+
+
+def _resolve_category_id(name: str | None):
+    if not name:
+        return None
+    with SessionLocal() as s:
+        row = s.execute(select(Category.id).where(Category.name == name)).first()
+        return row[0] if row else None
+
+
+def _resolve_account_id(name: str | None):
+    if not name:
+        return None
+    with SessionLocal() as s:
+        row = s.execute(select(Account.id).where(Account.name == name)).first()
+        return row[0] if row else None
+
 
 def run():
     root = tk.Tk()
@@ -270,8 +296,6 @@ def delete_selected(tree):
     else:
         messagebox.showerror("Delete", f"❌ Could not delete ID {tx_id}.")
     
-
-
 
 if __name__ == "__main__":
     run()
