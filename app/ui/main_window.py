@@ -223,6 +223,35 @@ def refresh_table(tree, cb_type=None, cb_category=None, cb_account=None):
     acc_id = _resolve_account_id(cb_account.get().strip()) if cb_account and cb_account.get().strip() else None
 
     with SessionLocal() as s:
+        # maps id -> name for pretty display
+        acc_map = dict(s.execute(select(Account.id, Account.name)).all())
+        cat_map = dict(s.execute(select(Category.id, Category.name)).all())
+
+        rows = get_transactions(
+            s,
+            tx_type=tx_type,
+            category_id=cat_id,
+            account_id=acc_id,
+        )
+
+    for r in rows:
+        account_name = acc_map.get(getattr(r, "account_id", None), "")
+        category_name = cat_map.get(getattr(r, "category_id", None), "")
+        tree.insert(
+            "",
+            "end",
+            values=(
+                r.id,
+                r.date.isoformat(),
+                r.type,
+                f"{float(r.amount):.2f}",
+                account_name,      # 🔹 nome em vez de id
+                category_name,     # 🔹 nome em vez de id
+                (r.notes or "")[:80],
+            ),
+        )
+
+    with SessionLocal() as s:
         rows = get_transactions(
             s,
             tx_type=tx_type,
@@ -297,6 +326,10 @@ def run():
     ttk.Label(filters, text="Account").pack(side="left")
     cb_account = ttk.Combobox(filters, width=18, state="readonly")
     cb_account.pack(side="left", padx=(4, 12))
+
+    cb_type = ttk.Combobox(filters, values=["", "expense", "income"], width=10, state="readonly")
+    cb_type.pack(side="left", padx=(0, 12))
+    cb_type.set("")  
 
     # load options into filters
     _load_filter_options(cb_category, cb_account)
