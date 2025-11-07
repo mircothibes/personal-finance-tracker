@@ -23,11 +23,13 @@ def test_db_connection():
 
 
 class AddTransactionDialog(tk.Toplevel):
-    def __init__(self, master: tk.Misc):
+    """Modal para adicionar/editar transações. Passe tx_id para editar."""
+    def __init__(self, master: tk.Misc, tx_id: int | None = None):
         super().__init__(master)
-        self.title("Add Transaction")
+        self.title("Edit Transaction" if tx_id else "Add Transaction")
         self.resizable(False, False)
         self.grab_set()  # modal
+        self.tx_id = tx_id
 
         pad = {"padx": 8, "pady": 6}
         frm = ttk.Frame(self, padding=12)
@@ -76,6 +78,8 @@ class AddTransactionDialog(tk.Toplevel):
         # initial data
         self._load_accounts()
         self._load_categories()
+        if self.tx_id:
+            self._load_existing_values()
 
     def _load_accounts(self):
         with SessionLocal() as ses:
@@ -101,6 +105,29 @@ class AddTransactionDialog(tk.Toplevel):
             self.var_category.set(names[0])
         else:
             self.var_category.set("")
+
+    def _load_existing_values(self):
+        with SessionLocal() as s:
+            tx = s.get(Transaction, self.tx_id)
+            if not tx:
+                messagebox.showerror("Error", f"Transaction {self.tx_id} not found.")
+                self.destroy()
+                return
+            self.var_type.set(tx.type)
+            self.var_date.set(tx.date.isoformat())
+            self.var_amount.set(str(float(tx.amount)))
+
+            # garantir categorias do tipo atual
+            self._load_categories()
+
+            acc_row = s.execute(select(Account.name).where(Account.id == tx.account_id)).first()
+            cat_row = s.execute(select(Category.name).where(Category.id == tx.category_id)).first()
+            if acc_row:
+                self.var_account.set(acc_row[0])
+            if cat_row:
+                self.var_category.set(cat_row[0])
+            self.txt_notes.delete(0, "end")
+            self.txt_notes.insert(0, tx.notes or "")
 
     def _on_save(self):
         # validations
@@ -134,18 +161,29 @@ class AddTransactionDialog(tk.Toplevel):
 
         notes = self.txt_notes.get().strip() or None
 
-        # insert
+        # insert/update
         try:
             with SessionLocal() as ses:
-                tx = Transaction(
-                    date=tx_date,
-                    amount=amt,
-                    type=typ,
-                    account_id=self._accounts_map[acc_name],
-                    category_id=self._categories_map[cat_name],
-                    notes=notes,
-                )
-                ses.add(tx)
+                if self.tx_id:
+                    tx = ses.get(Transaction, self.tx_id)
+                    if not tx:
+                        raise ValueError("Transaction not found.")
+                    tx.date = tx_date
+                    tx.amount = amt
+                    tx.type = typ
+                    tx.account_id = self._accounts_map[acc_name]
+                    tx.category_id = self._categories_map[cat_name]
+                    tx.notes = notes
+                else:
+                    tx = Transaction(
+                        date=tx_date,
+                        amount=amt,
+                        type=typ,
+                        account_id=self._accounts_map[acc_name],
+                        category_id=self._categories_map[cat_name],
+                        notes=notes,
+                    )
+                    ses.add(tx)
                 ses.commit()
             messagebox.showinfo("Success", "✅ Transaction saved!")
             self.destroy()
@@ -245,40 +283,29 @@ def refresh_table(tree, cb_type=None, cb_category=None, cb_account=None):
                 r.date.isoformat(),
                 r.type,
                 f"{float(r.amount):.2f}",
-                account_name,      # 🔹 nome em vez de id
-                category_name,     # 🔹 nome em vez de id
-                (r.notes or "")[:80],
-            ),
-        )
-
-    with SessionLocal() as s:
-        rows = get_transactions(
-            s,
-            tx_type=tx_type,
-            category_id=cat_id,
-            account_id=acc_id,
-        )
-
-    for r in rows:
-        tree.insert(
-            "",
-            "end",
-            values=(
-                r.id,
-                r.date.isoformat(),
-                r.type,
-                f"{r.amount:.2f}",
-                r.account_id,
-                r.category_id,
+                account_name,      # nome
+                category_name,     # nome
                 (r.notes or "")[:80],
             ),
         )
 
 
 def open_add_transaction(root, tree, cb_type, cb_category, cb_account):
-    """Open the modal and refresh the table after it closes."""
+    """Open the add modal and refresh the table after it closes."""
     dlg = AddTransactionDialog(root)
     root.wait_window(dlg)  # wait until modal is closed
+    refresh_table(tree, cb_type, cb_category, cb_account)
+
+
+def open_edit_transaction(root, tree, cb_type, cb_category, cb_account):
+    """Open the edit modal for the selected row."""
+    sel = tree.selection()
+    if not sel:
+        messagebox.showinfo("Edit", "No transaction selected.")
+        return
+    tx_id = int(tree.item(sel[0], "values")[0])
+    dlg = AddTransactionDialog(root, tx_id=tx_id)
+    root.wait_window(dlg)
     refresh_table(tree, cb_type, cb_category, cb_account)
 
 
@@ -302,7 +329,12 @@ def run():
 
     ttk.Button(row, text="Test DB", command=test_db_connection).pack(side="left")
 
-    # Add Transaction now refreshes the table after closing the modal
+    # placeholders; serão definidos depois dos widgets
+    cb_type = ttk.Combobox(row)  # só para evitar UnboundLocal (será recriado abaixo)
+    cb_category = ttk.Combobox(row)
+    cb_account = ttk.Combobox(row)
+
+    # botões de ação
     ttk.Button(
         row,
         text="Add Transaction…",
@@ -318,6 +350,7 @@ def run():
     ttk.Label(filters, text="Type").pack(side="left", padx=(0, 4))
     cb_type = ttk.Combobox(filters, values=["", "expense", "income"], width=10, state="readonly")
     cb_type.pack(side="left", padx=(0, 12))
+    cb_type.set("")  # começa sem filtro
 
     ttk.Label(filters, text="Category").pack(side="left")
     cb_category = ttk.Combobox(filters, width=18, state="readonly")
@@ -326,10 +359,6 @@ def run():
     ttk.Label(filters, text="Account").pack(side="left")
     cb_account = ttk.Combobox(filters, width=18, state="readonly")
     cb_account.pack(side="left", padx=(4, 12))
-
-    cb_type = ttk.Combobox(filters, values=["", "expense", "income"], width=10, state="readonly")
-    cb_type.pack(side="left", padx=(0, 12))
-    cb_type.set("")  
 
     # load options into filters
     _load_filter_options(cb_category, cb_account)
@@ -354,7 +383,7 @@ def run():
     table_frame = ttk.Frame(container)
     table_frame.pack(fill="both", expand=True, pady=(4, 8))
 
-    columns = ("id", "date", "type", "amount", "account_id", "category_id", "notes")
+    columns = ("id", "date", "type", "amount", "account", "category", "notes")
     tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=14)
     for col in columns:
         tree.heading(col, text=col.title())
@@ -366,12 +395,22 @@ def run():
     scrollbar.pack(side="right", fill="y")
     tree.configure(yscroll=scrollbar.set)
 
-    # --- Delete Button (keeps filters) ---
+    # duplo clique para editar
+    tree.bind("<Double-1>", lambda e: open_edit_transaction(root, tree, cb_type, cb_category, cb_account))
+
+    # --- Action Buttons (Edit/Delete) ---
+    actions = ttk.Frame(container)
+    actions.pack(fill="x", pady=(0, 10))
     ttk.Button(
-        container,
+        actions,
+        text="Edit Selected",
+        command=lambda: open_edit_transaction(root, tree, cb_type, cb_category, cb_account)
+    ).pack(side="left")
+    ttk.Button(
+        actions,
         text="Delete Selected",
         command=lambda: delete_selected(tree, cb_type, cb_category, cb_account)
-    ).pack(pady=(0, 10))
+    ).pack(side="left", padx=8)
 
     # --- Status Bar ---
     status = ttk.Label(container, text=f"Connected URL: {os.getenv('DATABASE_URL','(not set)')}",
@@ -387,6 +426,7 @@ def run():
 
 if __name__ == "__main__":
     run()
+
 
 
 
