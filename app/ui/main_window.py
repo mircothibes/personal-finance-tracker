@@ -149,14 +149,24 @@ class TransactionDialog(tk.Toplevel):
 
 
 # ---------- table / filters ----------
-def refresh_table(tree, cb_type=None, cb_category=None, cb_account=None):
+def _parse_date_or_none(s: str | None):
+    if not s: return None
+    try:
+        return datetime.strptime(s.strip(), "%Y-%m-%d").date()
+    except Exception:
+        return None  # silencioso: filtro vazio/ruim é ignorado
+
+def refresh_table(tree, cb_type=None, cb_category=None, cb_account=None, ent_from=None, ent_to=None):
     for i in tree.get_children(): tree.delete(i)
     tx_type = (cb_type.get().strip() or None) if cb_type else None
     cat_id  = id_from_name(Category, cb_category.get().strip()) if cb_category and cb_category.get().strip() else None
     acc_id  = id_from_name(Account,  cb_account.get().strip())  if cb_account  and cb_account.get().strip()  else None
+    d_from  = _parse_date_or_none(ent_from.get()) if ent_from else None
+    d_to    = _parse_date_or_none(ent_to.get())   if ent_to   else None
     with SessionLocal() as s:
         acc_map, cat_map = map_ids_to_names(s)
-        rows = get_transactions(s, tx_type=tx_type, category_id=cat_id, account_id=acc_id)
+        rows = get_transactions(s, tx_type=tx_type, category_id=cat_id, account_id=acc_id,
+                                date_from=d_from, date_to=d_to)
     for r in rows:
         tree.insert("", "end", values=(
             r.id, r.date.isoformat(), r.type, f"{float(r.amount):.2f}",
@@ -164,35 +174,37 @@ def refresh_table(tree, cb_type=None, cb_category=None, cb_account=None):
             (r.notes or "")[:80],
         ))
 
-def clear_filters_and_refresh(tree, cb_type, cb_category, cb_account):
+def clear_filters_and_refresh(tree, cb_type, cb_category, cb_account, ent_from, ent_to):
     cb_type.set(""); cb_category.set(""); cb_account.set("")
-    refresh_table(tree, cb_type, cb_category, cb_account)
+    ent_from.delete(0, "end"); ent_to.delete(0, "end")
+    refresh_table(tree, cb_type, cb_category, cb_account, ent_from, ent_to)
 
-def delete_selected(tree, cb_type, cb_category, cb_account):
+def delete_selected(tree, cb_type, cb_category, cb_account, ent_from, ent_to):
     sel = tree.selection()
     if not sel: return show_info("Delete","No transaction selected.")
     tx_id = int(tree.item(sel[0], "values")[0])
     if not messagebox.askyesno("Confirm", f"Delete transaction ID {tx_id}?"): return
     with SessionLocal() as s: ok = delete_transaction(s, tx_id)
     show_info("Delete", f"✅ Transaction {tx_id} deleted.") if ok else show_err("Delete","❌ Could not delete.")
-    refresh_table(tree, cb_type, cb_category, cb_account)
+    refresh_table(tree, cb_type, cb_category, cb_account, ent_from, ent_to)
 
-def open_add(root, tree, cb_type, cb_category, cb_account):
-    dlg = TransactionDialog(root); root.wait_window(dlg); refresh_table(tree, cb_type, cb_category, cb_account)
+def open_add(root, tree, cb_type, cb_category, cb_account, ent_from, ent_to):
+    dlg = TransactionDialog(root); root.wait_window(dlg)
+    refresh_table(tree, cb_type, cb_category, cb_account, ent_from, ent_to)
 
-def open_edit(root, tree, cb_type, cb_category, cb_account):
+def open_edit(root, tree, cb_type, cb_category, cb_account, ent_from, ent_to):
     sel = tree.selection()
     if not sel: return show_info("Edit","No transaction selected.")
     tx_id = int(tree.item(sel[0], "values")[0])
     dlg = TransactionDialog(root, tx_id=tx_id); root.wait_window(dlg)
-    refresh_table(tree, cb_type, cb_category, cb_account)
+    refresh_table(tree, cb_type, cb_category, cb_account, ent_from, ent_to)
 
 
 # ---------- main window ----------
 def run():
     root = tk.Tk()
     root.title("Finance Tracker")
-    root.geometry("900x600")
+    root.geometry("980x600")
     root.resizable(True, True)
 
     container = ttk.Frame(root, padding=16); container.pack(fill="both", expand=True)
@@ -216,40 +228,55 @@ def run():
     cb_account = ttk.Combobox(filters, width=18, state="readonly"); cb_account.pack(side="left", padx=(4, 12))
     load_filter_options(cb_category, cb_account)
 
+    ttk.Label(filters, text="From").pack(side="left", padx=(8, 4))
+    ent_from = ttk.Entry(filters, width=12); ent_from.pack(side="left")
+    ttk.Label(filters, text="To").pack(side="left", padx=(8, 4))
+    ent_to   = ttk.Entry(filters, width=12); ent_to.pack(side="left")
+
     # Table
     table_frame = ttk.Frame(container); table_frame.pack(fill="both", expand=True, pady=(4, 8))
     columns = ("id","date","type","amount","account","category","notes")
     tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=14)
     for col in columns:
-        tree.heading(col, text=col.title()); tree.column(col, anchor="center", width=100)
-    tree.column("notes", width=240, anchor="w")
+        tree.heading(col, text=col.title()); tree.column(col, anchor="center", width=110 if col!="notes" else 240)
+    tree.column("notes", width=300, anchor="w")
     tree.pack(side="left", fill="both", expand=True)
-    ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview).pack(side="right", fill="y")
-    tree.configure(yscroll=lambda *a: tree.yview(*a))
-    tree.bind("<Double-1>", lambda e: open_edit(root, tree, cb_type, cb_category, cb_account))
+
+    # ✅ Scrollbar correto (corrige o TclError)
+    scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+    scrollbar.pack(side="right", fill="y")
+    tree.configure(yscrollcommand=scrollbar.set)
+
+    tree.bind("<Double-1>", lambda e: open_edit(root, tree, cb_type, cb_category, cb_account, ent_from, ent_to))
 
     # Actions
     actions = ttk.Frame(container); actions.pack(fill="x", pady=(0, 10))
-    ttk.Button(actions, text="Add Transaction…", command=lambda: open_add(root, tree, cb_type, cb_category, cb_account)).pack(side="left")
-    ttk.Button(actions, text="Edit Selected",   command=lambda: open_edit(root, tree, cb_type, cb_category, cb_account)).pack(side="left", padx=8)
-    ttk.Button(actions, text="Delete Selected", command=lambda: delete_selected(tree, cb_type, cb_category, cb_account)).pack(side="left", padx=8)
-    ttk.Button(actions, text="Apply Filters",   command=lambda: refresh_table(tree, cb_type, cb_category, cb_account)).pack(side="left", padx=8)
-    ttk.Button(actions, text="Clear",           command=lambda: clear_filters_and_refresh(tree, cb_type, cb_category, cb_account)).pack(side="left", padx=8)
-    ttk.Button(actions, text="Exit",            command=root.destroy).pack(side="right")
+    ttk.Button(actions, text="Add Transaction…",
+               command=lambda: open_add(root, tree, cb_type, cb_category, cb_account, ent_from, ent_to)).pack(side="left")
+    ttk.Button(actions, text="Edit Selected",
+               command=lambda: open_edit(root, tree, cb_type, cb_category, cb_account, ent_from, ent_to)).pack(side="left", padx=8)
+    ttk.Button(actions, text="Delete Selected",
+               command=lambda: delete_selected(tree, cb_type, cb_category, cb_account, ent_from, ent_to)).pack(side="left", padx=8)
+    ttk.Button(actions, text="Apply Filters",
+               command=lambda: refresh_table(tree, cb_type, cb_category, cb_account, ent_from, ent_to)).pack(side="left", padx=8)
+    ttk.Button(actions, text="Clear",
+               command=lambda: clear_filters_and_refresh(tree, cb_type, cb_category, cb_account, ent_from, ent_to)).pack(side="left", padx=8)
+    ttk.Button(actions, text="Exit", command=root.destroy).pack(side="right")
 
     status = ttk.Label(container, text=f"Connected URL: {os.getenv('DATABASE_URL','(not set)')}", anchor="w", relief="groove")
     status.pack(fill="x", pady=(8, 0))
 
     # initial load
-    refresh_table(tree, cb_type, cb_category, cb_account)
-    for w in (cb_type, cb_category, cb_account):
-        w.bind("<Return>", lambda e: refresh_table(tree, cb_type, cb_category, cb_account))
+    refresh_table(tree, cb_type, cb_category, cb_account, ent_from, ent_to)
+    for w in (cb_type, cb_category, cb_account, ent_from, ent_to):
+        w.bind("<Return>", lambda e: refresh_table(tree, cb_type, cb_category, cb_account, ent_from, ent_to))
 
     root.mainloop()
 
 
 if __name__ == "__main__":
     run()
+
 
 
 
