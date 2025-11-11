@@ -1,0 +1,7 @@
+id,date,type,amount,account,category,notes
+6,2025-11-10,expense,250.00,Cash,Entertainment,Shopping
+5,2025-11-10,expense,65.00,Bank Account,Transport,Bus and Train
+4,2025-11-07,expense,36.99,Bank Account,Food,Lunch
+3,2025-11-07,expense,2000.00,Bank Account,Rent,rent november
+2,2025-11-07,expense,55.00,Bank Account,Entertainment,cinema
+1,2025-11-07,expense,120.00,Bank Account,Food,supermarket
