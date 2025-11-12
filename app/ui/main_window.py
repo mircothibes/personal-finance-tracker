@@ -10,6 +10,7 @@ from decimal import Decimal, InvalidOperation
 from dotenv import load_dotenv
 from sqlalchemy import text, select
 
+from app.ui.dashboard_window import open_dashboard
 from app.db import engine, SessionLocal, get_transactions, delete_transaction
 from app.models import Category, Account, Transaction
 
@@ -235,6 +236,7 @@ def run():
 
     top = ttk.Frame(container); top.pack(fill="x", pady=(8,0))
     ttk.Button(top, text="Test DB", command=test_db_connection).pack(side="left")
+    ttk.Button(top, text="Dashboard", command=lambda: open_dashboard(root)).pack(side="left", padx=8)
 
     # filters
     filters = ttk.Frame(container); filters.pack(fill="x", pady=(12,4))
