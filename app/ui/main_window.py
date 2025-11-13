@@ -69,10 +69,15 @@ def parse_date(s: str | None):
 class TransactionDialog(tk.Toplevel):
     def __init__(self, master: tk.Misc, tx_id: int | None = None):
         super().__init__(master)
+        
+        self.tx_id = tx_id
         self.title("Edit Transaction" if tx_id else "Add Transaction")
         self.resizable(False, False)
-        self.grab_set()
-        self.tx_id = tx_id
+        
+        # Make this dialog modal and attached to the parent window
+        self.transient(master)   # type: ignore[arg-type]       
+        self.wait_visibility()   # wait until the window is viewable       
+        self.grab_set()          # modal: block interaction with other windows   
 
         pad = {"padx": 8, "pady": 6}
         frm = ttk.Frame(self, padding=12)
