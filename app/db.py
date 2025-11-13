@@ -1,3 +1,4 @@
+# app/db.py
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, select, and_
@@ -32,6 +33,7 @@ def get_transactions(
     account_id: int | None = None,
     date_from: str | None = None,  # "YYYY-MM-DD" (ou datetime/date se preferir)
     date_to: str | None = None,
+    notes_query: str | None = None,
 ):
     """
     Return a list of Transaction objects applying optional filters.
@@ -48,6 +50,8 @@ def get_transactions(
         filters.append(Transaction.date >= date_from)
     if date_to:
         filters.append(Transaction.date <= date_to)
+    if notes_query:  
+        filters.append(Transaction.notes.ilike(f"%{notes_query}%"))    
 
     stmt = select(Transaction)
 
