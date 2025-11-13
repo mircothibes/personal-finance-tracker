@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, select, and_
 from sqlalchemy.orm import sessionmaker
 from .models import Transaction, Category, Account
+from datetime import date
 
 
 load_dotenv()
@@ -31,8 +32,8 @@ def get_transactions(
     tx_type: str | None = None,
     category_id: int | None = None,
     account_id: int | None = None,
-    date_from: str | None = None,  # "YYYY-MM-DD" (ou datetime/date se preferir)
-    date_to: str | None = None,
+    date_from: date | None = None,  # "YYYY-MM-DD" 
+    date_to: date | None = None,
     notes_query: str | None = None,
 ):
     """
