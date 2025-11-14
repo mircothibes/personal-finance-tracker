@@ -2,22 +2,21 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import date
-from collections import defaultdict
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from app.db import SessionLocal, get_transactions
-from app.models import Transaction
+from app.models import Category
 
 
 def _load_aggregates():
     """
-    Load simple aggregates from the database:
+    Load aggregates from the database for the last 12 months:
     - total income
     - total expense
     - net
-    - monthly sums for the last 12 months
+    - expenses grouped by category (for pie chart)
     """
     today = date.today()
     year_ago = date(today.year - 1, today.month, 1)
@@ -25,39 +24,48 @@ def _load_aggregates():
     with SessionLocal() as s:
         rows = get_transactions(s, date_from=year_ago, date_to=today)
 
+        # Map category_id -> category_name
+        cat_rows = s.query(Category.id, Category.name).all()
+        cat_map = {cid: cname for cid, cname in cat_rows}
+
     total_income = 0.0
     total_expense = 0.0
 
-    # key: "YYYY-MM" -> value: net (income - expense)
-    monthly = defaultdict(float)
+    # expenses by category_id
+    expense_by_cat_id: dict[int, float] = {}
 
     for tx in rows:
         amt = float(tx.amount)
-        ym = tx.date.strftime("%Y-%m")
 
         if tx.type == "income":
             total_income += amt
-            monthly[ym] += amt
         else:
             total_expense += amt
-            monthly[ym] -= amt
+            if tx.category_id is not None:
+                expense_by_cat_id[tx.category_id] = (
+                    expense_by_cat_id.get(tx.category_id, 0.0) + amt
+                )
 
     net = total_income - total_expense
 
-    # Sort months chronologically
-    sorted_months = sorted(monthly.keys())
-    x_labels = sorted_months
-    y_values = [monthly[m] for m in sorted_months]
+    # Convert to labels/values using category names
+    labels: list[str] = []
+    values: list[float] = []
 
-    return total_income, total_expense, net, x_labels, y_values
+    for cid, value in expense_by_cat_id.items():
+        name = cat_map.get(cid, f"Category {cid}")
+        labels.append(name)
+        values.append(value)
+
+    return total_income, total_expense, net, labels, values
 
 
 def open_dashboard(master: tk.Misc) -> None:
     """
-    Open a simple dashboard window with totals and a bar chart.
+    Open a dashboard window with totals and a pie chart of expenses by category.
     """
     try:
-        total_income, total_expense, net, x_labels, y_values = _load_aggregates()
+        total_income, total_expense, net, labels, values = _load_aggregates()
     except Exception as e:
         messagebox.showerror("Dashboard", f"Could not load data:\n{e}")
         return
@@ -67,7 +75,7 @@ def open_dashboard(master: tk.Misc) -> None:
     win.geometry("900x600")
     win.resizable(True, True)
 
-    # Make window appear nicely over the main window
+    # Show on top of the main window
     win.transient(master)  # type: ignore[arg-type]
     win.lift()
     win.focus_force()
@@ -104,18 +112,22 @@ def open_dashboard(master: tk.Misc) -> None:
     card(summary, "Total Expense", total_expense)
     card(summary, "Net", net)
 
-    # --- matplotlib figure ---------------------------------------------------
+    # --- matplotlib figure: pie chart ---------------------------------------
     fig = Figure(figsize=(7, 4))
     ax = fig.add_subplot(111)
 
-    if x_labels:
-        ax.bar(x_labels, y_values)
-        ax.set_title("Net by month")
-        ax.set_xlabel("Month")
-        ax.set_ylabel("Net amount")
-        ax.tick_params(axis="x", rotation=45)
+    if values:
+        ax.pie(
+            values,
+            labels=labels,
+            autopct="%1.1f%%",
+            startangle=90,
+        )
+        ax.set_title("Expenses by category (last 12 months)")
+        ax.axis("equal")  # make it look like a circle
     else:
-        ax.text(0.5, 0.5, "No data to display", ha="center", va="center")
+        ax.text(0.5, 0.5, "No expense data to display", ha="center", va="center")
+        ax.axis("off")
 
     fig.tight_layout()
 
@@ -126,4 +138,3 @@ def open_dashboard(master: tk.Misc) -> None:
 
     # Close button
     ttk.Button(container, text="Close", command=win.destroy).pack(pady=(8, 0))
-
