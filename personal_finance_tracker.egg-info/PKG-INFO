@@ -1,0 +1,144 @@
+Metadata-Version: 2.4
+Name: personal-finance-tracker
+Version: 0.1.0
+Summary: Desktop app to track personal income and expenses (Python + PostgreSQL).
+Author: Marcos Vinicius Thibes Kemer
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: SQLAlchemy>=2.0.0
+Requires-Dist: psycopg2-binary>=2.9.0
+Requires-Dist: python-dotenv>=1.0.1
+
+# 💰 Personal Finance Tracker
+
+A simple yet powerful **personal finance management app** built with **Python**, **PostgreSQL**, and **Docker**.  
+This project demonstrates real backend architecture using **SQLAlchemy ORM**, **Alembic migrations**, and **data seeding scripts** — all developed and managed entirely on **Linux (Ubuntu + Neovim)**.
+
+---
+
+## 📘 Overview
+
+The `finance-tracker` application is designed to help users organize their **expenses**, **income**, and **accounts** with clarity and structure.  
+It includes full database migration management and version control using **Alembic**.
+
+### 🧩 Implemented so far:
+| Feature | Description |
+|----------|--------------|
+| 🗂️ **Categories Table** | Stores transaction categories such as “Food”, “Salary”, “Rent”, etc. |
+| 💳 **Accounts Table** | Represents financial accounts like “Wallet”, “Bank Account”, or “Savings”. |
+| 🔁 **Transactions Table** | Tracks all income and expenses with foreign keys and constraints. |
+| ⚙️ **Alembic Migrations** | Versioned database schema management. |
+| 🌱 **Seed Script** | Automatic population of initial categories directly in PostgreSQL. |
+
+---
+
+## ⚙️ Tech Stack
+
+- 🐍 **Python 3.12**
+- 🗃️ **PostgreSQL 16**
+- 🐳 **Docker & Docker Compose**
+- 🧱 **SQLAlchemy ORM**
+- 🔄 **Alembic Migrations**
+- 🌿 **Python Dotenv** (for environment configuration)
+- 🧠 **Linux + Neovim Development Setup**
+
+---
+
+## 🧭 Project Structure
+```bash
+finance-tracker/
+├── alembic/
+│ ├── versions/
+│ ├── env.py
+│ ├── script.py.mako
+│ └── README
+├── scripts/
+│ └── seed_categories.py
+├── .env
+├── Dockerfile
+├── docker-compose.yml
+└── README.md
+```
+
+---
+
+## 🐳 Docker Setup
+
+### 1️⃣ Build and start the services
+```bash
+docker compose up --build -d
+```
+
+### 2️⃣ Verify that both containers are running
+```bash
+docker compose ps
+```
+
+---
+
+## 🧱 Database Migrations with Alembic
+Create a new migration
+```bash
+alembic revision -m "add new table or column"
+```
+
+Apply migrations
+```bash
+alembic upgrade head
+```
+
+Check migration history
+```bash
+alembic history --verbose
+```
+
+---
+
+## 💡 Development Highlights
+
+- Built and tested entirely inside Linux (Ubuntu)
+- Managed with Neovim, tmux, and Docker CLI
+- Fully reproducible through versioned migrations (alembic/versions)
+- Consistent environment setup for local or cloud deployment
+
+---
+
+## 🧑‍💻 Author
+
+Marcos Vinicius Thibes Kemer
+
+---
+
+## 📜 License
+
+* This project is released under the MIT License.
+* Feel free to use, modify, and learn from it.
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
