@@ -1,121 +1,129 @@
+# app/ui/dashboard_window.py
 import tkinter as tk
 from tkinter import ttk, messagebox
-from datetime import datetime
-import matplotlib
+from datetime import date
+from collections import defaultdict
+
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from sqlalchemy import select, extract, func
 
-from app.db import SessionLocal
-from app.models import Transaction, Category
-
-matplotlib.use("Agg")  # prevent backend issues on WSL/Ubuntu
+from app.db import SessionLocal, get_transactions
+from app.models import Transaction
 
 
-def open_dashboard(master: tk.Misc):
-    """Open dashboard window with charts and summary."""
-    win = tk.Toplevel(master)
-    win.title("Finance Dashboard")
-    win.geometry("920x600")
-    win.grab_set()
+def _load_aggregates():
+    """
+    Load simple aggregates from the database:
+    - total income
+    - total expense
+    - net
+    - monthly sums for the last 12 months
+    """
+    today = date.today()
+    year_ago = date(today.year - 1, today.month, 1)
 
-    ttk.Label(
-        win,
-        text="📊 Finance Dashboard",
-        font=("Segoe UI", 14, "bold")
-    ).pack(anchor="w", padx=16, pady=(10, 0))
+    with SessionLocal() as s:
+        rows = get_transactions(s, date_from=year_ago, date_to=today)
 
-    ttk.Separator(win).pack(fill="x", pady=8)
+    total_income = 0.0
+    total_expense = 0.0
 
+    # key: "YYYY-MM" -> value: net (income - expense)
+    monthly = defaultdict(float)
+
+    for tx in rows:
+        amt = float(tx.amount)
+        ym = tx.date.strftime("%Y-%m")
+
+        if tx.type == "income":
+            total_income += amt
+            monthly[ym] += amt
+        else:
+            total_expense += amt
+            monthly[ym] -= amt
+
+    net = total_income - total_expense
+
+    # Sort months chronologically
+    sorted_months = sorted(monthly.keys())
+    x_labels = sorted_months
+    y_values = [monthly[m] for m in sorted_months]
+
+    return total_income, total_expense, net, x_labels, y_values
+
+
+def open_dashboard(master: tk.Misc) -> None:
+    """
+    Open a simple dashboard window with totals and a bar chart.
+    """
     try:
-        with SessionLocal() as s:
-            # ---- totals ----
-            total_income = s.scalar(
-                select(func.coalesce(func.sum(Transaction.amount), 0)).where(Transaction.type == "income")
-            )
-            total_expense = s.scalar(
-                select(func.coalesce(func.sum(Transaction.amount), 0)).where(Transaction.type == "expense")
-            )
-            net_balance = total_income - total_expense
-
-            # ---- expense by category ----
-            cat_rows = s.execute(
-                select(Category.name, func.sum(Transaction.amount))
-                .join(Transaction, Transaction.category_id == Category.id)
-                .where(Transaction.type == "expense")
-                .group_by(Category.name)
-                .order_by(func.sum(Transaction.amount).desc())
-            ).all()
-
-            # ---- monthly totals ----
-            month_rows = s.execute(
-                select(
-                    extract("month", Transaction.date),
-                    Transaction.type,
-                    func.sum(Transaction.amount),
-                )
-                .group_by(extract("month", Transaction.date), Transaction.type)
-                .order_by(extract("month", Transaction.date))
-            ).all()
+        total_income, total_expense, net, x_labels, y_values = _load_aggregates()
     except Exception as e:
-        messagebox.showerror("Error", f"Database error:\n{e}")
-        win.destroy()
+        messagebox.showerror("Dashboard", f"Could not load data:\n{e}")
         return
 
-    # ---------- summary ----------
-    summary_frame = ttk.Frame(win, padding=10)
-    summary_frame.pack(fill="x")
+    win = tk.Toplevel(master)
+    win.title("Finance Dashboard")
+    win.geometry("900x600")
+    win.resizable(True, True)
 
-    ttk.Label(summary_frame, text=f"Total Income: {total_income:.2f} €", foreground="green").pack(anchor="w")
-    ttk.Label(summary_frame, text=f"Total Expense: {total_expense:.2f} €", foreground="red").pack(anchor="w")
-    ttk.Label(summary_frame, text=f"Net Balance: {net_balance:.2f} €", foreground="blue").pack(anchor="w")
+    # Make window appear nicely over the main window
+    win.transient(master)  # type: ignore[arg-type]
+    win.lift()
+    win.focus_force()
 
-    ttk.Separator(win).pack(fill="x", pady=8)
+    container = ttk.Frame(win, padding=16)
+    container.pack(fill="both", expand=True)
 
-    # ---------- charts frame ----------
-    charts = ttk.Frame(win)
-    charts.pack(fill="both", expand=True, padx=10, pady=10)
+    ttk.Label(
+        container,
+        text="Dashboard",
+        font=("Segoe UI", 14, "bold")
+    ).pack(anchor="w")
 
-    # --- Pie Chart: Expenses by Category ---
-    fig1 = Figure(figsize=(4.5, 3.5), dpi=100)
-    ax1 = fig1.add_subplot(111)
-    if cat_rows:
-        labels, values = zip(*cat_rows)
-        ax1.pie(values, labels=labels, autopct="%1.1f%%", startangle=140)
-        ax1.set_title("Expenses by Category")
+    ttk.Label(
+        container,
+        text="Summary of incomes and expenses (last 12 months).",
+        font=("Segoe UI", 10)
+    ).pack(anchor="w", pady=(4, 12))
+
+    # --- summary cards -------------------------------------------------------
+    summary = ttk.Frame(container)
+    summary.pack(fill="x", pady=(0, 12))
+
+    def card(parent, title, value):
+        frame = ttk.LabelFrame(parent, text=title, padding=8)
+        frame.pack(side="left", padx=8, fill="x", expand=True)
+        ttk.Label(
+            frame,
+            text=f"{value:,.2f}",
+            font=("Segoe UI", 12, "bold")
+        ).pack(anchor="center")
+
+    card(summary, "Total Income", total_income)
+    card(summary, "Total Expense", total_expense)
+    card(summary, "Net", net)
+
+    # --- matplotlib figure ---------------------------------------------------
+    fig = Figure(figsize=(7, 4))
+    ax = fig.add_subplot(111)
+
+    if x_labels:
+        ax.bar(x_labels, y_values)
+        ax.set_title("Net by month")
+        ax.set_xlabel("Month")
+        ax.set_ylabel("Net amount")
+        ax.tick_params(axis="x", rotation=45)
     else:
-        ax1.text(0.5, 0.5, "No expenses yet", ha="center", va="center")
+        ax.text(0.5, 0.5, "No data to display", ha="center", va="center")
 
-    canvas1 = FigureCanvasTkAgg(fig1, master=charts)
-    canvas1.draw()
-    canvas1.get_tk_widget().grid(row=0, column=0, padx=8, pady=8)
+    fig.tight_layout()
 
-    # --- Bar Chart: Monthly Income vs Expense ---
-    months = sorted(set(int(m) for m, _, _ in month_rows))
-    income_data = {int(m): float(v) for m, t, v in month_rows if t == "income"}
-    expense_data = {int(m): float(v) for m, t, v in month_rows if t == "expense"}
+    canvas = FigureCanvasTkAgg(fig, master=container)
+    canvas.draw()
+    canvas_widget = canvas.get_tk_widget()
+    canvas_widget.pack(fill="both", expand=True)
 
-    fig2 = Figure(figsize=(4.5, 3.5), dpi=100)
-    ax2 = fig2.add_subplot(111)
-
-    if months:
-        incomes = [income_data.get(m, 0) for m in months]
-        expenses = [expense_data.get(m, 0) for m in months]
-        month_labels = [datetime(2024, m, 1).strftime("%b") for m in months]
-
-        x = range(len(months))
-        ax2.bar(x, incomes, width=0.4, label="Income", align="center")
-        ax2.bar([i + 0.4 for i in x], expenses, width=0.4, label="Expense", align="center")
-        ax2.set_xticks([i + 0.2 for i in x])
-        ax2.set_xticklabels(month_labels)
-        ax2.set_title("Monthly Income vs Expense")
-        ax2.legend()
-    else:
-        ax2.text(0.5, 0.5, "No data yet", ha="center", va="center")
-
-    canvas2 = FigureCanvasTkAgg(fig2, master=charts)
-    canvas2.draw()
-    canvas2.get_tk_widget().grid(row=0, column=1, padx=8, pady=8)
-
-    ttk.Button(win, text="Close", command=win.destroy).pack(pady=(10, 12))
+    # Close button
+    ttk.Button(container, text="Close", command=win.destroy).pack(pady=(8, 0))
 
