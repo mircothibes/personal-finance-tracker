@@ -39,6 +39,8 @@ alembic-revision:
 alembic-upgrade:
 	docker compose exec app alembic upgrade head
 
+build-exe:
+	. .venv/bin/activate && pyinstaller --name finance-tracker --onefile --windowed app/gui.py
 
 
 
