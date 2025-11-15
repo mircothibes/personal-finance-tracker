@@ -3,3 +3,7 @@ __pycache__/
 .venv/
 .env
 .alembic_env
+
+# PyInstaller build artifacts
+build/
+dist/
