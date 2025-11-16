@@ -16,11 +16,15 @@ authors = [
 dependencies = [
     "SQLAlchemy>=2.0.0",
     "psycopg2-binary>=2.9.0",
-    "python-dotenv>=1.0.1"
+    "python-dotenv>=1.0.1",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0"	
 ]
 
 [project.gui-scripts]
 finance-tracker = "app.gui:main"
+
+[project.scripts]
 finance-tracker-checkdb = "app.main:main"
 
 [tool.setuptools.packages.find]

@@ -1,3 +1,5 @@
+[console_scripts]
+finance-tracker-checkdb = app.main:main
+
 [gui_scripts]
 finance-tracker = app.gui:main
-finance-tracker-checkdb = app.main:main

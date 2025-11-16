@@ -1,9 +1,55 @@
+# -------------------------
+# Python
+# -------------------------
 __pycache__/
 *.pyc
-.venv/
-.env
-.alembic_env
+*.pyo
+*.pyd
 
-# PyInstaller build artifacts
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Byte-compiled / optimized / DLL files
+*.so
+*.dll
+*.dylib
+
+# -------------------------
+# Environment variables
+# -------------------------
+.env
+dist/.env
+
+# -------------------------
+# Build / Distribution
+# -------------------------
 build/
 dist/
+*.spec
+
+# PyInstaller additional
+*.manifest
+*.exe
+
+# -------------------------
+# Alembic
+# -------------------------
+alembic/__pycache__/
+alembic/versions/__pycache__/
+.alembic_env
+alembic.ini
+
+# -------------------------
+# Database (SQLite leftovers, just in case)
+# -------------------------
+*.db
+*.sqlite3
+
+# -------------------------
+# Docker
+# -------------------------
+*.log
+docker-data/
+personal-finance-tracker_db_data/

@@ -8,6 +8,8 @@ Description-Content-Type: text/markdown
 Requires-Dist: SQLAlchemy>=2.0.0
 Requires-Dist: psycopg2-binary>=2.9.0
 Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: matplotlib>=3.7.0
 
 # 💰 Personal Finance Tracker
 
