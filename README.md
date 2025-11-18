@@ -117,12 +117,78 @@ The project now includes a full Windows desktop build, packaged as a standalone 
 | 🐘 **Native PostgreSQL on Windows**        | Fully connected to PostgreSQL 16 running locally.                                               |
 | 🚀 **Docker Optional**                     | Can run using Windows PostgreSQL OR Docker-based PostgreSQL.                                    |
 
+---
+
+## 🚀 Windows Installation Workflow
+
+1️⃣ Build the EXE
+```
+pyinstaller --noconfirm --windowed --icon=finance_tracker_icon.ico app/gui.py
+```
+The build outputs to:
+```
+/dist/finance-tracker.exe
+```
+
+2️⃣ Copy environment variables
+```
+copy .env dist\.env
+```
+
+3️⃣ Create installer using Inno Setup
+
+The script used:
+```
+[Setup]
+AppName=Finance Tracker
+AppVersion=1.0
+DefaultDirName={pf}\Finance Tracker
+DefaultGroupName=Finance Tracker
+OutputDir=installer
+OutputBaseFilename=finance-tracker-installer
+SetupIconFile=finance_tracker_icon.ico
+
+[Files]
+Source: "dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+
+[Icons]
+Name: "{autoprograms}\Finance Tracker"; Filename: "{app}\finance-tracker.exe"
+Name: "{autodesktop}\Finance Tracker"; Filename: "{app}\finance-tracker.exe"
+```
+---
+
+## 🖼️ Final Result (Windows)
+
+- ✔️ App installs like real software
+- ✔️ Desktop shortcut created automatically
+- ✔️ Custom golden icon applied
+- ✔️ Connects to PostgreSQL correctly
+- ✔️ Fully functional GUI (accounts, categories, dashboard, filters)
 
 ---
 
-## 🧑‍💻 Author
+## 📦 Portable Version (Optional)
+```bash
+dist/
+│── finance-tracker.exe
+│── .env
+│── all required DLL + Python runtime
+```
+This version runs without installation.
 
-Marcos Vinicius Thibes Kemer
+---
+
+## 🛡️ Error Handling & Debug Mode
+
+The Windows executable supports debug testing via:
+```
+finance-tracker-checkdb
+```
+Which checks:
+
+- PostgreSQL access
+- .env parsing
+- Connection string validity
 
 ---
 
@@ -132,6 +198,10 @@ Marcos Vinicius Thibes Kemer
 * Feel free to use, modify, and learn from it.
 
 ---
+
+## 🧑‍💻 Author
+
+Marcos Vinicius Thibes Kemer
 
 
 
