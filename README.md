@@ -22,13 +22,13 @@ It includes full database migration management and version control using **Alemb
 ---
 
 ## 🔱 Project Logo
-![Finance Tracker Icon](assets/finance_icon.png)
+<img src="assets/finance_icon.png" width="200">
 
 ## 💸 Transactions Screen
-![Transactions](assets/transactions.png)
+<img src="assets/transactions.png" width="500">
 
 ## 📊 Dashboard Example
-![Dashboard](assets/dashboard.png)
+<img src="assets/dashboard.png" width="500">
 
 ---
 
@@ -103,7 +103,7 @@ alembic history --verbose
 
 ---
 
-🪟 Windows Build & Installer Support
+## 🪟 Windows Build & Installer Support
 
 The project now includes a full Windows desktop build, packaged as a standalone .exe application with installer, icon, and PostgreSQL connection — making it a real-world desktop software.
 
