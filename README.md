@@ -21,14 +21,14 @@ It includes full database migration management and version control using **Alemb
 
 ---
 
-## 📊 Dashboard Example
-![Dashboard](assets/dashboard.png)
+## 🔱 Project Logo
+![Finance Tracker Icon](assets/finance_icon.png)
 
 ## 💸 Transactions Screen
 ![Transactions](assets/transactions.png)
 
-## 🔱 Project Logo
-![Finance Tracker Icon](assets/finance_icon.png)
+## 📊 Dashboard Example
+![Dashboard](assets/dashboard.png)
 
 ---
 
