@@ -21,6 +21,17 @@ It includes full database migration management and version control using **Alemb
 
 ---
 
+## 📊 Dashboard Example
+![Dashboard](assets/dashboard.png)
+
+## 💸 Transactions Screen
+![Transactions](assets/transactions.png)
+
+## 🔱 Project Logo
+![Finance Tracker Icon](assets/finance_icon.png)
+
+---
+
 ## ⚙️ Tech Stack
 
 - 🐍 **Python 3.12**
@@ -89,6 +100,23 @@ alembic history --verbose
 - Managed with Neovim, tmux, and Docker CLI
 - Fully reproducible through versioned migrations (alembic/versions)
 - Consistent environment setup for local or cloud deployment
+
+---
+
+🪟 Windows Build & Installer Support
+
+The project now includes a full Windows desktop build, packaged as a standalone .exe application with installer, icon, and PostgreSQL connection — making it a real-world desktop software.
+
+✔️ What was added on Windows
+| Feature                                    | Description                                                                                     |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| 🖥️ **Standalone EXE (PyInstaller)**       | Full executable build that runs without Python installed.                                       |
+| 📦 **Professional Installer (Inno Setup)** | Creates Start Menu shortcut, Desktop shortcut, and adds the app to Windows Programs & Features. |
+| 🪪 **Custom Premium Icon (.ico)**          | High-quality gold-themed finance icon used for the EXE and installer.                           |
+| 🔧 **Automatic `env` Injection**           | `.env` is copied into the executable folder for DB configuration.                               |
+| 🐘 **Native PostgreSQL on Windows**        | Fully connected to PostgreSQL 16 running locally.                                               |
+| 🚀 **Docker Optional**                     | Can run using Windows PostgreSQL OR Docker-based PostgreSQL.                                    |
+
 
 ---
 
